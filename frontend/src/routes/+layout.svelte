@@ -1,9 +1,5 @@
-<script lang="ts">
-  // Your script here
+<script>
+  import "../app.css";
 </script>
 
 <slot />
-
-<style>
-  /* Your styles here */
-</style> 
