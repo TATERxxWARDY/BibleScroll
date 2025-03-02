@@ -32,6 +32,13 @@
   let currentChapter = 1; // Track current chapter
   let totalChapters = 20; // Total number of chapters
   
+  // Use fixed widths for chapter containers instead of dynamic calculation
+  // This avoids constant recalculation and visual flicker
+  const CHAPTER_WIDTHS = {
+    ACTIVE: 800,  // Fixed width for active chapter
+    INACTIVE: 500 // Fixed width for inactive chapters
+  };
+  
   // Update isDarkMode when theme changes
   $: isDarkMode = $theme === 'dark';
   
@@ -488,18 +495,26 @@
         {#if zoomLevel === ZOOM_LEVELS.CHAPTER}
           <div id="chapter-view-container" class="chapter-view-container flex flex-row space-x-8">
             {#each Array(totalChapters) as _, i}
-              <div id="chapter-{i+1}" class="chapter-wrapper">
+              <!-- Replace dynamic width with fixed width based on whether it's the current chapter -->
+              <div 
+                id="chapter-{i+1}" 
+                class="chapter-wrapper" 
+                style="width: {i+1 === currentChapter ? CHAPTER_WIDTHS.ACTIVE : CHAPTER_WIDTHS.INACTIVE}px; margin-right: 2rem;"
+              >
                 {#if i+1 === currentChapter}
                   <!-- Current chapter with full content -->
-                  <div class="chapter-container p-6 border-r border-gray-200 dark:border-gray-700 flex-shrink-0 relative">
+                  <div class="chapter-container p-6 border-r border-gray-200 dark:border-gray-700 relative">
                     <h2 class="text-xl font-bold mb-4">Chapter {i+1}</h2>
-                    <!-- Multi-column layout for verses -->
-                    <div class="verses-container" style="
-                      columns: 3 240px;
-                      column-gap: 40px;
-                      column-fill: balance;
-                      height: calc(100vh - 180px);
-                    ">
+                    <!-- Multi-column layout for verses WITHOUT offsetWidth binding -->
+                    <div 
+                      class="verses-container" 
+                      style="
+                        columns: 3 240px;
+                        column-gap: 40px;
+                        column-fill: balance;
+                        height: calc(100vh - 180px);
+                      "
+                    >
                       {#each Array(20) as _, j}
                         <div class="verse p-2 mb-3 rounded break-inside-avoid-column bg-white/20 dark:bg-gray-800/20 hover:bg-white/30 dark:hover:bg-gray-800/30 transition-colors">
                           <span class="font-medium mr-2 text-blue-600 dark:text-blue-400">{j+1}</span>
@@ -510,7 +525,7 @@
                   </div>
                 {:else}
                   <!-- Other chapters with visible headings but skeleton content -->
-                  <div class="chapter-container p-6 border-r border-gray-200 dark:border-gray-700 flex-shrink-0 opacity-70 hover:opacity-100 transition-opacity">
+                  <div class="chapter-container p-6 border-r border-gray-200 dark:border-gray-700 opacity-70 hover:opacity-100 transition-opacity">
                     <div class="flex items-center justify-between mb-4">
                       <h2 class="text-xl font-bold cursor-pointer" on:click={() => changeCurrentChapter(i+1)}>Chapter {i+1}</h2>
                       <button 
@@ -538,13 +553,16 @@
                         </svg>
                       </button>
                     </div>
-                    <!-- Multi-column layout for skeleton content -->
-                    <div class="skeleton-verses-container" style="
-                      columns: 2 200px;
-                      column-gap: 30px;
-                      column-fill: auto;
-                      height: calc(100vh - 180px);
-                    ">
+                    <!-- Multi-column layout for skeleton content WITHOUT offsetWidth binding -->
+                    <div 
+                      class="skeleton-verses-container" 
+                      style="
+                        columns: 2 200px;
+                        column-gap: 30px;
+                        column-fill: auto;
+                        height: calc(100vh - 180px);
+                      "
+                    >
                       {#each Array(Math.floor(Math.random() * 5) + 15) as _, j}
                         <div class="skeleton-verse h-8 mb-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse break-inside-avoid-column"></div>
                       {/each}
