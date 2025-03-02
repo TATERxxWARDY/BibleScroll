@@ -346,32 +346,31 @@
   // Bible view shows the complete bible structure
   function generateBibleView() {
     return `
-      <div class="bible-container p-8 min-w-[1200px]">
-        <h1 class="text-4xl font-bold mb-10 text-center">Holy Bible</h1>
-        <div class="space-y-12">
-          <div>
-            <h2 class="text-2xl font-bold mb-6">Old Testament</h2>
-            <div class="grid grid-cols-3 gap-4 text-sm">
-              ${Array(39)
-                .fill(0)
-                .map((_, i) => `
-                  <div class="p-2 border border-gray-200 dark:border-gray-700 rounded">
-                    Book ${i + 1}
-                  </div>
-                `).join('')}
-            </div>
+      <div class="bible-container flex flex-row items-stretch border-r border-gray-200 dark:border-gray-700 min-w-[2400px]">
+        <div class="testament-section p-8 border-r border-gray-200 dark:border-gray-700 min-w-[1200px]">
+          <h1 class="text-3xl font-bold mb-8">Old Testament</h1>
+          <div class="grid grid-cols-6 gap-4 text-sm">
+            ${Array(39)
+              .fill(0)
+              .map((_, i) => `
+                <div class="p-3 border border-gray-200 dark:border-gray-700 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                  <h3 class="font-medium">Book ${i + 1}</h3>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Chapters: ${Math.floor(Math.random() * 30) + 10}</p>
+                </div>
+              `).join('')}
           </div>
-          <div>
-            <h2 class="text-2xl font-bold mb-6">New Testament</h2>
-            <div class="grid grid-cols-3 gap-4 text-sm">
-              ${Array(27)
-                .fill(0)
-                .map((_, i) => `
-                  <div class="p-2 border border-gray-200 dark:border-gray-700 rounded">
-                    Book ${i + 1}
-                  </div>
-                `).join('')}
-            </div>
+        </div>
+        <div class="testament-section p-8 min-w-[1200px]">
+          <h1 class="text-3xl font-bold mb-8">New Testament</h1>
+          <div class="grid grid-cols-6 gap-4 text-sm">
+            ${Array(27)
+              .fill(0)
+              .map((_, i) => `
+                <div class="p-3 border border-gray-200 dark:border-gray-700 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                  <h3 class="font-medium">Book ${i + 1}</h3>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Chapters: ${Math.floor(Math.random() * 20) + 5}</p>
+                </div>
+              `).join('')}
           </div>
         </div>
       </div>
