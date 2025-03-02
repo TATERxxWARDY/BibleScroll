@@ -32,6 +32,10 @@
   let currentChapter = 1; // Track current chapter
   let totalChapters = 20; // Total number of chapters
   
+  // Arrays to track content dimensions for each chapter
+  let chapterContentWidths = Array(totalChapters).fill(1000);
+  let versesContainers = Array(totalChapters).fill(null);
+  
   // Use fixed widths for chapter containers instead of dynamic calculation
   // This avoids constant recalculation and visual flicker
   const CHAPTER_WIDTHS = {
@@ -403,6 +407,27 @@
       </div>
     `;
   }
+  
+  // Function to measure chapter content width
+  function measureChapterWidth(index) {
+    if (versesContainers[index]) {
+      const width = versesContainers[index].offsetWidth;
+      if (width > 0 && chapterContentWidths[index] !== width) {
+        chapterContentWidths[index] = width;
+        chapterContentWidths = [...chapterContentWidths]; // Trigger reactivity
+      }
+    }
+  }
+
+  // Measure width when content changes
+  $: currentChapter, setTimeout(() => {
+    measureChapterWidth(currentChapter - 1);
+  }, 0);
+
+  onMount(() => {
+    // Initial measurement for current chapter
+    measureChapterWidth(currentChapter - 1);
+  });
 </script>
 
 <div class={cn("h-screen w-full flex flex-col", isDarkMode ? "dark" : "")}>
@@ -499,15 +524,16 @@
               <div 
                 id="chapter-{i+1}" 
                 class="chapter-wrapper" 
-                style="width: {i+1 === currentChapter ? CHAPTER_WIDTHS.ACTIVE : CHAPTER_WIDTHS.INACTIVE}px; margin-right: 2rem;"
+                style="width: {chapterContentWidths[i] ? (chapterContentWidths[i] + 48) + 'px' : 'auto'}; margin-right: 2rem;"
               >
                 {#if i+1 === currentChapter}
                   <!-- Current chapter with full content -->
                   <div class="chapter-container p-6 border-r border-gray-200 dark:border-gray-700 relative">
                     <h2 class="text-xl font-bold mb-4">Chapter {i+1}</h2>
-                    <!-- Multi-column layout for verses WITHOUT offsetWidth binding -->
+                    <!-- Multi-column layout for verses without continuous binding -->
                     <div 
                       class="verses-container" 
+                      bind:this={versesContainers[i]}
                       style="
                         columns: 3 240px;
                         column-gap: 40px;
