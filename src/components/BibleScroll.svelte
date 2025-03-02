@@ -524,7 +524,7 @@
               <div 
                 id="chapter-{i+1}" 
                 class="chapter-wrapper" 
-                style="width: {chapterContentWidths[i] ? (chapterContentWidths[i] + 48) + 'px' : 'auto'}; margin-right: 2rem;"
+                style="width: {i+1 === currentChapter ? (chapterContentWidths[i] ? (chapterContentWidths[i] + 48) + 'px' : 'auto') : '400px'}; margin-right: 2rem;"
               >
                 {#if i+1 === currentChapter}
                   <!-- Current chapter with full content -->
@@ -565,31 +565,30 @@
                             nextHref: i+2 <= totalChapters ? `/api/chapters/${i+2}` : null,
                             prevHref: i > 0 ? `/api/chapters/${i}` : null
                           },
-                          // This can be replaced with actual fetch implementation
                           fetchFn: null
                         })}
                         data-chapter-id={i+1}
                         data-chapter-href={`/api/chapters/${i+1}`}
                         aria-label="View chapter {i+1}"
                       >
-                        <!-- Eye icon (view) -->
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                           <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
                           <circle cx="12" cy="12" r="3"></circle>
                         </svg>
                       </button>
                     </div>
-                    <!-- Multi-column layout for skeleton content WITHOUT offsetWidth binding -->
+                    <!-- Compact layout for inactive chapters -->
                     <div 
                       class="skeleton-verses-container" 
                       style="
-                        columns: 2 200px;
-                        column-gap: 30px;
+                        width: 600px;
+                        columns: 2 180px;
+                        column-gap: 20px;
                         column-fill: auto;
                         height: calc(100vh - 180px);
                       "
                     >
-                      {#each Array(Math.floor(Math.random() * 5) + 15) as _, j}
+                      {#each Array(Math.floor(Math.random() * 15) + 3) as _, j}
                         <div class="skeleton-verse h-8 mb-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse break-inside-avoid-column"></div>
                       {/each}
                     </div>
