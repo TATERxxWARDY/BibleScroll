@@ -9,6 +9,7 @@
   import DialogTitle from './ui/DialogTitle.svelte';
   import DialogDescription from './ui/DialogDescription.svelte';
   import DialogFooter from './ui/DialogFooter.svelte';
+  import ChapterSkeleton from './ChapterSkeleton.svelte';
   
   // Zoom levels
   const ZOOM_LEVELS = {
@@ -28,6 +29,8 @@
   let scrollLeft = 0;
   let showInfoDialog = false;
   let needsColumnDetection = false;
+  let currentChapter = 1; // Track current chapter
+  let totalChapters = 20; // Total number of chapters
   
   // Update isDarkMode when theme changes
   $: isDarkMode = $theme === 'dark';
@@ -112,6 +115,43 @@
     }
   }
   
+  // Function to handle changing the current chapter
+  function changeCurrentChapter(chapterNum, fetchOptions = {}) {
+    if (chapterNum >= 1 && chapterNum <= totalChapters) {
+      // Show loading state if needed
+      const isLoading = fetchOptions.shouldFetch || false;
+      
+      // Allow integration with server-side fetching
+      if (fetchOptions.fetchFn && typeof fetchOptions.fetchFn === 'function') {
+        // Execute the provided fetch function
+        fetchOptions.fetchFn(chapterNum, fetchOptions.chapterData)
+          .then(() => {
+            // Update current chapter after successful fetch
+            currentChapter = chapterNum;
+            scrollToChapter(chapterNum);
+          })
+          .catch(error => {
+            console.error('Error fetching chapter:', error);
+            // Optionally handle the error state
+          });
+      } else {
+        // Default behavior (client-side only)
+        currentChapter = chapterNum;
+        scrollToChapter(chapterNum);
+      }
+    }
+  }
+  
+  // Helper function to scroll to the selected chapter
+  function scrollToChapter(chapterNum) {
+    setTimeout(() => {
+      const chapterElement = document.getElementById(`chapter-${chapterNum}`);
+      if (chapterElement && scrollContainer) {
+        scrollContainer.scrollLeft = chapterElement.offsetLeft - scrollContainer.offsetWidth / 2 + chapterElement.offsetWidth / 2;
+      }
+    }, 100);
+  }
+  
   // Generate Bible content based on zoom level
   $: bibleContent = getBibleContent(zoomLevel);
   $: if (zoomLevel === ZOOM_LEVELS.VERSE) {
@@ -123,7 +163,8 @@
       case ZOOM_LEVELS.VERSE:
         return generateVerseView();
       case ZOOM_LEVELS.CHAPTER:
-        return generateChapterView();
+        // Return a placeholder - we'll handle chapter view with components
+        return null;
       case ZOOM_LEVELS.BOOK:
         return generateBookView();
       case ZOOM_LEVELS.TESTAMENT:
@@ -131,7 +172,7 @@
       case ZOOM_LEVELS.BIBLE:
         return generateBibleView();
       default:
-        return generateChapterView();
+        return null;
     }
   }
   
@@ -269,27 +310,6 @@
     }
     
     needsColumnDetection = false;
-  }
-  
-  // Chapter view shows verses grouped by chapters
-  function generateChapterView() {
-    return Array(20)
-      .fill(0)
-      .map((_, i) => `
-        <div class="chapter-container p-6 border-r border-gray-200 dark:border-gray-700 min-w-[400px]">
-          <h2 class="text-xl font-bold mb-4">Chapter ${i + 1}</h2>
-          <div class="space-y-3">
-            ${Array(10)
-              .fill(0)
-              .map((_, j) => `
-                <div class="verse p-2 border border-gray-100 dark:border-gray-800 rounded">
-                  <span class="font-medium mr-2">${j + 1}</span>
-                  <span class="text-sm">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</span>
-                </div>
-              `).join('')}
-          </div>
-        </div>
-      `).join('');
   }
   
   // Book view shows chapters grouped by books
@@ -465,7 +485,81 @@
       on:touchend={handleMouseUpOrLeave}
     >
       <div class="flex h-full">
-        {@html bibleContent}
+        {#if zoomLevel === ZOOM_LEVELS.CHAPTER}
+          <div id="chapter-view-container" class="chapter-view-container flex flex-row space-x-8">
+            {#each Array(totalChapters) as _, i}
+              <div id="chapter-{i+1}" class="chapter-wrapper">
+                {#if i+1 === currentChapter}
+                  <!-- Current chapter with full content -->
+                  <div class="chapter-container p-6 border-r border-gray-200 dark:border-gray-700 min-w-[800px] relative">
+                    <h2 class="text-xl font-bold mb-4">Chapter {i+1}</h2>
+                    <!-- Multi-column layout for verses -->
+                    <div class="verses-container" style="
+                      columns: 3 240px;
+                      column-gap: 40px;
+                      column-fill: balance;
+                      width: 760px;
+                      height: calc(100vh - 180px);
+                      margin-right: 20px;
+                    ">
+                      {#each Array(20) as _, j}
+                        <div class="verse p-2 mb-3 rounded break-inside-avoid-column bg-white/20 dark:bg-gray-800/20 hover:bg-white/30 dark:hover:bg-gray-800/30 transition-colors">
+                          <span class="font-medium mr-2 text-blue-600 dark:text-blue-400">{j+1}</span>
+                          <span class="text-sm">Lorem ipsum dolor sit amet, consectetur adipiscing elit. {j % 3 === 0 ? 'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.' : ''}</span>
+                        </div>
+                      {/each}
+                    </div>
+                  </div>
+                {:else}
+                  <!-- Other chapters with visible headings but skeleton content -->
+                  <div class="chapter-container p-6 border-r border-gray-200 dark:border-gray-700 min-w-[480px] opacity-70 hover:opacity-100 transition-opacity">
+                    <div class="flex items-center justify-between mb-4">
+                      <h2 class="text-xl font-bold cursor-pointer" on:click={() => changeCurrentChapter(i+1)}>Chapter {i+1}</h2>
+                      <button 
+                        class="view-chapter-btn p-2 rounded-full bg-white/90 dark:bg-gray-800/90 text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 shadow-md hover:shadow-lg border border-blue-200 dark:border-blue-800 transition-all duration-200 scale-100 hover:scale-105"
+                        on:click={() => changeCurrentChapter(i+1, {
+                          // Example integration points for server-side fetching
+                          shouldFetch: true,
+                          chapterData: {
+                            id: `chapter-${i+1}`,
+                            href: `/api/chapters/${i+1}`,
+                            nextHref: i+2 <= totalChapters ? `/api/chapters/${i+2}` : null,
+                            prevHref: i > 0 ? `/api/chapters/${i}` : null
+                          },
+                          // This can be replaced with actual fetch implementation
+                          fetchFn: null
+                        })}
+                        data-chapter-id={i+1}
+                        data-chapter-href={`/api/chapters/${i+1}`}
+                        aria-label="View chapter {i+1}"
+                      >
+                        <!-- Eye icon (view) -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+                          <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                      </button>
+                    </div>
+                    <!-- Multi-column layout for skeleton content -->
+                    <div class="skeleton-verses-container" style="
+                      columns: 2 200px;
+                      column-gap: 30px;
+                      column-fill: auto;
+                      width: 440px;
+                      height: calc(100vh - 180px);
+                    ">
+                      {#each Array(Math.floor(Math.random() * 5) + 15) as _, j}
+                        <div class="skeleton-verse h-8 mb-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse break-inside-avoid-column"></div>
+                      {/each}
+                    </div>
+                  </div>
+                {/if}
+              </div>
+            {/each}
+          </div>
+        {:else}
+          {@html bibleContent}
+        {/if}
       </div>
     </div>
 
@@ -502,7 +596,6 @@
       </Button>
     </div>
     
-    <!-- Info Dialog -->
     <Dialog bind:open={showInfoDialog}>
       <DialogContent>
         <DialogHeader>
