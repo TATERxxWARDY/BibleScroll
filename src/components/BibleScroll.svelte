@@ -491,16 +491,14 @@
               <div id="chapter-{i+1}" class="chapter-wrapper">
                 {#if i+1 === currentChapter}
                   <!-- Current chapter with full content -->
-                  <div class="chapter-container p-6 border-r border-gray-200 dark:border-gray-700 min-w-[800px] relative">
+                  <div class="chapter-container p-6 border-r border-gray-200 dark:border-gray-700 flex-shrink-0 relative">
                     <h2 class="text-xl font-bold mb-4">Chapter {i+1}</h2>
                     <!-- Multi-column layout for verses -->
                     <div class="verses-container" style="
                       columns: 3 240px;
                       column-gap: 40px;
                       column-fill: balance;
-                      width: 760px;
                       height: calc(100vh - 180px);
-                      margin-right: 20px;
                     ">
                       {#each Array(20) as _, j}
                         <div class="verse p-2 mb-3 rounded break-inside-avoid-column bg-white/20 dark:bg-gray-800/20 hover:bg-white/30 dark:hover:bg-gray-800/30 transition-colors">
@@ -512,7 +510,7 @@
                   </div>
                 {:else}
                   <!-- Other chapters with visible headings but skeleton content -->
-                  <div class="chapter-container p-6 border-r border-gray-200 dark:border-gray-700 min-w-[480px] opacity-70 hover:opacity-100 transition-opacity">
+                  <div class="chapter-container p-6 border-r border-gray-200 dark:border-gray-700 flex-shrink-0 opacity-70 hover:opacity-100 transition-opacity">
                     <div class="flex items-center justify-between mb-4">
                       <h2 class="text-xl font-bold cursor-pointer" on:click={() => changeCurrentChapter(i+1)}>Chapter {i+1}</h2>
                       <button 
@@ -545,7 +543,6 @@
                       columns: 2 200px;
                       column-gap: 30px;
                       column-fill: auto;
-                      width: 440px;
                       height: calc(100vh - 180px);
                     ">
                       {#each Array(Math.floor(Math.random() * 5) + 15) as _, j}
