@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+  bible-scroll-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    # For development, you can mount the dist folder
+    # volumes:
+    #   - ./dist:/usr/share/nginx/html 
