@@ -27,6 +27,7 @@
   let startX = 0;
   let scrollLeft = 0;
   let showInfoDialog = false;
+  let needsColumnDetection = false;
   
   // Update isDarkMode when theme changes
   $: isDarkMode = $theme === 'dark';
@@ -113,6 +114,9 @@
   
   // Generate Bible content based on zoom level
   $: bibleContent = getBibleContent(zoomLevel);
+  $: if (zoomLevel === ZOOM_LEVELS.VERSE) {
+    needsColumnDetection = true;
+  }
   
   function getBibleContent(level) {
     switch (level) {
@@ -133,14 +137,138 @@
   
   // Verse view shows individual verses
   function generateVerseView() {
-    return Array(50)
-      .fill(0)
-      .map((_, i) => `
-        <div class="verse-container p-6 border-r border-gray-200 dark:border-gray-700 min-w-[300px]">
-          <h3 class="text-lg font-semibold mb-2">Verse ${i + 1}</h3>
-          <p class="text-sm">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
-        </div>
-      `).join('');
+    // Create an array of verses with variable lengths for demonstration
+    const verses = Array(40).fill(0).map((_, i) => {
+      // Vary the length of verses for demonstration purposes
+      // Make longer verses more likely for a few specific positions to demonstrate the continuation more clearly
+      const isSpecialPosition = [4, 9, 14, 19, 24, 29, 34].includes(i);
+      const length = isSpecialPosition 
+        ? Math.floor(Math.random() * 3) + 3 // 3, 4, or 5 units of text
+        : Math.floor(Math.random() * 2) + 1; // 1 or 2 units of text
+      
+      return {
+        number: i + 1,
+        text: Array(length).fill("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.").join(' ')
+      };
+    });
+
+    // Calculate total width for horizontal scrolling
+    const columnCount = 3;
+    const columnWidth = 350; // px
+    const columnGap = 30; // px
+    const containerPadding = 24; // px
+    const totalWidth = (columnWidth * columnCount) + (columnGap * (columnCount - 1)) + (containerPadding * 2);
+
+    // We'll use CSS multi-column layout
+    return `
+      <div id="verse-view-container" class="verse-view-container" style="
+        min-width: ${totalWidth}px;
+        height: 100%;
+        padding: ${containerPadding}px;
+        columns: ${columnCount} ${columnWidth}px;
+        column-gap: ${columnGap}px;
+        column-fill: auto;
+        column-rule: 1px solid rgba(128, 128, 128, 0.2);
+      ">
+        ${verses.map((verse, index) => `
+          <div class="verse-container mb-4 p-4 break-inside-avoid-column bg-white/50 dark:bg-gray-800/50 rounded-md" 
+               data-verse-number="${verse.number}">
+            <div class="verse-header flex items-center mb-2">
+              <span class="verse-number font-semibold mr-2">${verse.number}.</span>
+              <span class="continued-indicator text-xs text-gray-500 hidden">(continued)</span>
+            </div>
+            <p class="verse-text text-sm leading-relaxed">${verse.text}</p>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+  
+  // Handle column continuation detection
+  onMount(() => {
+    // Set up a watcher for Bible content changes
+    const unsubscribe = (() => {
+      let prevContent = null;
+      return setInterval(() => {
+        if (needsColumnDetection && bibleContent !== prevContent) {
+          prevContent = bibleContent;
+          setTimeout(detectColumnContinuation, 100);
+        }
+      }, 200);
+    })();
+    
+    // Clean up on unmount
+    return () => {
+      clearInterval(unsubscribe);
+    };
+  });
+  
+  // Function to handle column continuation detection
+  function detectColumnContinuation() {
+    const container = document.getElementById('verse-view-container');
+    if (!container) return;
+    
+    const verseContainers = Array.from(container.querySelectorAll('.verse-container'));
+    if (verseContainers.length === 0) return;
+    
+    // Get the container's bounding rect
+    const containerRect = container.getBoundingClientRect();
+    
+    // Calculate column width including gap
+    const columnCount = 3;
+    const columnWidth = containerRect.width / columnCount;
+    
+    // Group verses by their column
+    const columnVerses = {};
+    
+    // Determine which column each verse is in
+    verseContainers.forEach(verse => {
+      const rect = verse.getBoundingClientRect();
+      const relativeLeft = rect.left - containerRect.left;
+      const columnIndex = Math.floor(relativeLeft / columnWidth);
+      
+      if (!columnVerses[columnIndex]) {
+        columnVerses[columnIndex] = [];
+      }
+      
+      columnVerses[columnIndex].push({
+        element: verse,
+        rect: rect,
+        number: parseInt(verse.getAttribute('data-verse-number'))
+      });
+    });
+    
+    // Sort verses in each column by their vertical position
+    Object.keys(columnVerses).forEach(columnIndex => {
+      columnVerses[columnIndex].sort((a, b) => a.rect.top - b.rect.top);
+    });
+    
+    // Now find verses that continue in the next column (by verse number sequence)
+    for (let i = 1; i < columnCount; i++) {
+      const currentColumnVerses = columnVerses[i] || [];
+      const prevColumnVerses = columnVerses[i-1] || [];
+      
+      if (currentColumnVerses.length > 0 && prevColumnVerses.length > 0) {
+        // First verse in this column
+        const firstVerseInCol = currentColumnVerses[0];
+        
+        // If the first verse in this column is the same number as the last verse in previous column + 1,
+        // it's a normal continuation, not a wrapped verse
+        const lastVerseInPrevCol = prevColumnVerses[prevColumnVerses.length - 1];
+        
+        if (firstVerseInCol.number !== lastVerseInPrevCol.number + 1) {
+          // This indicates a verse continued from the previous column
+          const continuedIndicator = firstVerseInCol.element.querySelector('.continued-indicator');
+          if (continuedIndicator) {
+            continuedIndicator.classList.remove('hidden');
+            // Update the text to make it clear which verse is continuing
+            continuedIndicator.textContent = `(${firstVerseInCol.number} continued)`;
+          }
+        }
+      }
+    }
+    
+    needsColumnDetection = false;
   }
   
   // Chapter view shows verses grouped by chapters
