@@ -30,17 +30,17 @@
   let showInfoDialog = false;
   let needsColumnDetection = false;
   let currentChapter = 1; // Track current chapter
-  let totalChapters = 20; // Total number of chapters
+  let totalChapters = 50; // Total number of chapters
   
   // Arrays to track content dimensions for each chapter
-  let chapterContentWidths = Array(totalChapters).fill(1000);
+  let chapterContentWidths = Array(totalChapters).fill(2200);
   let versesContainers = Array(totalChapters).fill(null);
   
   // Use fixed widths for chapter containers instead of dynamic calculation
   // This avoids constant recalculation and visual flicker
   const CHAPTER_WIDTHS = {
-    ACTIVE: 800,  // Fixed width for active chapter
-    INACTIVE: 500 // Fixed width for inactive chapters
+    ACTIVE: 800,    // Width for active chapters
+    INACTIVE: 400   // Width for inactive chapters
   };
   
   // Update isDarkMode when theme changes
@@ -428,6 +428,68 @@
     // Initial measurement for current chapter
     measureChapterWidth(currentChapter - 1);
   });
+
+  // Update function to determine if chapter should be active
+  function isChapterActive(chapterIndex, currentChapter) {
+    // For first chapter, show chapters 1-3 active
+    if (currentChapter === 1) {
+      return chapterIndex < 3;
+    }
+    // For last chapter, show last 3 chapters active
+    if (currentChapter === totalChapters) {
+      return chapterIndex >= totalChapters - 3;
+    }
+    // Otherwise show current chapter and one on each side
+    const distance = Math.abs(chapterIndex + 1 - currentChapter);
+    return distance <= 1;
+  }
+
+  // Lorem Ipsum Generator
+  const LOREM_WORDS = [
+    "lorem", "ipsum", "dolor", "sit", "amet", 
+    "consectetur", "adipiscing", "elit", "sed", "do",
+    "eiusmod", "tempor", "incididunt", "labore", "et",
+    "dolore", "magna", "aliqua", "ut", "enim",
+    "ad", "minim", "veniam", "quis", "nostrud",
+    "exercitation", "ullamco", "laboris", "nisi", "aliquip",
+    "ex", "ea", "commodo", "consequat", "duis",
+    "aute", "irure", "dolor"
+  ];
+
+  // Box-Muller transform for normal distribution
+  function normalRandom(mean, stdDev) {
+    const u1 = 1.0 - Math.random();
+    const u2 = 1.0 - Math.random();
+    const randStdNormal = Math.sqrt(-2.0 * Math.log(u1)) * Math.sin(2.0 * Math.PI * u2);
+    return mean + stdDev * randStdNormal;
+  }
+
+  // Generate a single verse with random length
+  function generateRandomVerse() {
+    // Generate word count with normal distribution (mean=25, stdDev=10)
+    let wordCount = Math.round(normalRandom(25, 10));
+    
+    // Clamp to [2, 90] words
+    wordCount = Math.max(2, Math.min(90, wordCount));
+
+    // Special case for 2 words
+    if (wordCount === 2) {
+      return "Jesus wept.";
+    }
+
+    // Build the verse
+    const words = Array(wordCount).fill(0).map(() => 
+      LOREM_WORDS[Math.floor(Math.random() * LOREM_WORDS.length)]
+    );
+
+    return words.join(" ") + ".";
+  }
+
+  // Generate verses for a chapter
+  function generateChapterVerses() {
+    const averageVersesPerChapter = 26;
+    return Array(averageVersesPerChapter).fill(0).map(() => generateRandomVerse());
+  }
 </script>
 
 <div class={cn("h-screen w-full flex flex-col", isDarkMode ? "dark" : "")}>
@@ -520,55 +582,49 @@
         {#if zoomLevel === ZOOM_LEVELS.CHAPTER}
           <div id="chapter-view-container" class="chapter-view-container flex flex-row space-x-8">
             {#each Array(totalChapters) as _, i}
-              <!-- Replace dynamic width with fixed width based on whether it's the current chapter -->
+              <!-- Replace the chapter-wrapper div and its contents -->
               <div 
                 id="chapter-{i+1}" 
-                class="chapter-wrapper" 
-                style="width: {i+1 === currentChapter ? (chapterContentWidths[i] ? (chapterContentWidths[i] + 48) + 'px' : 'auto') : '400px'}; margin-right: 2rem;"
+                class="chapter-wrapper transition-all duration-300" 
+                style="
+                  width: {isChapterActive(i, currentChapter) 
+                    ? (chapterContentWidths[i] ? (chapterContentWidths[i] + 48) + 'px' : CHAPTER_WIDTHS.ACTIVE + 'px')
+                    : CHAPTER_WIDTHS.INACTIVE + 'px'
+                  }; 
+                  margin-right: 2rem;
+                "
               >
-                {#if i+1 === currentChapter}
-                  <!-- Current chapter with full content -->
+                {#if isChapterActive(i, currentChapter)}
+                  <!-- Active chapter with full content -->
                   <div class="chapter-container p-6 border-r border-gray-200 dark:border-gray-700 relative">
                     <h2 class="text-xl font-bold mb-4">Chapter {i+1}</h2>
-                    <!-- Multi-column layout for verses without continuous binding -->
                     <div 
                       class="verses-container" 
                       bind:this={versesContainers[i]}
                       style="
-                        columns: 3 240px;
-                        column-gap: 40px;
+                        columns: 3;
+                        column-gap: 2rem;
                         column-fill: balance;
                         height: calc(100vh - 180px);
+                        width: 100%;
                       "
                     >
-                      {#each Array(20) as _, j}
+                      {#each generateChapterVerses() as verse, j}
                         <div class="verse p-2 mb-3 rounded break-inside-avoid-column bg-white/20 dark:bg-gray-800/20 hover:bg-white/30 dark:hover:bg-gray-800/30 transition-colors">
                           <span class="font-medium mr-2 text-blue-600 dark:text-blue-400">{j+1}</span>
-                          <span class="text-sm">Lorem ipsum dolor sit amet, consectetur adipiscing elit. {j % 3 === 0 ? 'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.' : ''}</span>
+                          <span class="text-sm">{verse}</span>
                         </div>
                       {/each}
                     </div>
                   </div>
                 {:else}
-                  <!-- Other chapters with visible headings but skeleton content -->
+                  <!-- Inactive chapter with skeleton content -->
                   <div class="chapter-container p-6 border-r border-gray-200 dark:border-gray-700 opacity-70 hover:opacity-100 transition-opacity">
                     <div class="flex items-center justify-between mb-4">
                       <h2 class="text-xl font-bold cursor-pointer" on:click={() => changeCurrentChapter(i+1)}>Chapter {i+1}</h2>
                       <button 
                         class="view-chapter-btn p-2 rounded-full bg-white/90 dark:bg-gray-800/90 text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 shadow-md hover:shadow-lg border border-blue-200 dark:border-blue-800 transition-all duration-200 scale-100 hover:scale-105"
-                        on:click={() => changeCurrentChapter(i+1, {
-                          // Example integration points for server-side fetching
-                          shouldFetch: true,
-                          chapterData: {
-                            id: `chapter-${i+1}`,
-                            href: `/api/chapters/${i+1}`,
-                            nextHref: i+2 <= totalChapters ? `/api/chapters/${i+2}` : null,
-                            prevHref: i > 0 ? `/api/chapters/${i}` : null
-                          },
-                          fetchFn: null
-                        })}
-                        data-chapter-id={i+1}
-                        data-chapter-href={`/api/chapters/${i+1}`}
+                        on:click={() => changeCurrentChapter(i+1)}
                         aria-label="View chapter {i+1}"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -581,14 +637,13 @@
                     <div 
                       class="skeleton-verses-container" 
                       style="
-                        width: 600px;
                         columns: 2 180px;
                         column-gap: 20px;
                         column-fill: auto;
                         height: calc(100vh - 180px);
                       "
                     >
-                      {#each Array(Math.floor(Math.random() * 15) + 3) as _, j}
+                      {#each Array(Math.floor(Math.random() * 11) + 2) as _, j}
                         <div class="skeleton-verse h-8 mb-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse break-inside-avoid-column"></div>
                       {/each}
                     </div>
